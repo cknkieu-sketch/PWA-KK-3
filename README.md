@@ -20,3 +20,9 @@ A simple mobile-friendly, **offline** password vault. Data is encrypted on-devic
 - Open the site in Chrome on your phone → **Add to Home screen**.
 
 © 2025-09-19
+
+
+## Save backups to SD card (Android / Chrome)
+- Tap **Choose Backup Folder** → select your SD card directory in the system picker.
+- Tap **Save Backup to Folder** to write `.vault` directly there.
+- If your Chrome doesn’t support folder picking yet, the app will fall back to the standard download prompt; you can then choose the SD card in the system dialog.

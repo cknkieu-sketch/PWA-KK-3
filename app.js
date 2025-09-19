@@ -94,6 +94,73 @@
   function closePanel(){ panel.classList.remove("show"); }
 
   // Actions
+  // === SD card / Folder backup ===
+  let backupDir = null;
+
+  async function verifyPermission(handle, write=false) {
+    if (!handle) return false;
+    const opts = { mode: write ? 'readwrite' : 'read' };
+    if ((await handle.queryPermission?.(opts)) === 'granted') return true;
+    if ((await handle.requestPermission?.(opts)) === 'granted') return true;
+    return false;
+  }
+
+  async function chooseBackupFolder(){
+    if (!('showDirectoryPicker' in window)) {
+      alert('Your browser does not support choosing a folder. Use Export Encrypted Backup instead.');
+      return;
+    }
+    try{
+      const dir = await window.showDirectoryPicker({ id: 'passvault-backups' });
+      // Request write permission
+      const ok = await verifyPermission(dir, true);
+      if (!ok) { alert('Permission denied for this folder.'); return; }
+      backupDir = dir;
+      await dbSet('backupDir', dir); // store handle (structured clone)
+      alert('Backup folder set. Use "Save Backup to Folder" to write .vault files here.');
+    }catch(e){
+      if (e?.name !== 'AbortError') alert('Folder selection failed: ' + e.message);
+    }
+  }
+
+  async function exportBackupToFolder(){
+    try{
+      // Ensure vault is unlocked
+      if (!state.unlocked) { alert('Unlock first.'); return; }
+      // Ensure we have a directory handle
+      if (!backupDir) {
+        const fromDB = await dbGet('backupDir');
+        if (fromDB) backupDir = fromDB;
+      }
+      if (!backupDir) {
+        await chooseBackupFolder();
+        if (!backupDir) return;
+      }
+      // Check permission again
+      if (!(await verifyPermission(backupDir, true))) {
+        alert('No permission to write to this folder.');
+        return;
+      }
+      // Build encrypted payload (same as exportBackup)
+      const pass = prompt('Set a backup password (store it safely):');
+      if (!pass) return;
+      const salt = crypto.getRandomValues(new Uint8Array(16));
+      const key = await pbkdf2Key(pass, salt, 200000);
+      const payload = JSON.stringify({ meta: await getMeta(), data: state.vault });
+      const { iv, ct } = await aesEncrypt(key, payload);
+      const fileName = `passvault-backup-${new Date().toISOString().slice(0,10)}.vault`;
+      const fileHandle = await backupDir.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      await writable.write(JSON.stringify({ v:1, salt: b64url(salt), iv, ct }));
+      await writable.close();
+      alert('Backup saved to folder: ' + fileName + '\nTip: Choose your SD card folder in the picker to save there.');
+    }catch(e){
+      console.error(e);
+      alert('Save to folder failed: ' + e.message + '\nFalling back to download.');
+      await exportBackup(); // fallback
+    }
+  }
+
   async function handleSetup(){
     msgOnboarding.textContent="";
     const pin=$("#setup-pin").value.trim();
@@ -286,6 +353,8 @@
     $("#search")?.addEventListener("input", (e)=>renderList(e.target.value));
     $("#file-import")?.addEventListener("change", async (e)=>{ const f=e.target.files?.[0]; if(f) await importBackupFile(f); e.target.value=""; });
     $("#btn-export")?.addEventListener("click", exportBackup);
+    $("#btn-choose-dir")?.addEventListener("click", chooseBackupFolder);
+    $("#btn-export-dir")?.addEventListener("click", exportBackupToFolder);
     $("#list")?.addEventListener("click", async (e)=>{
       const t=e.target; const act=t.dataset.act; const id=t.dataset.id; if(!act) return;
       const item=state.vault.find(x=>x.id===id);
