@@ -7,6 +7,9 @@
   <meta name="theme-color" content="#0ea5e9" />
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root{ --radius:18px }
@@ -23,6 +26,7 @@
     <div class="max-w-3xl mx-auto flex items-center gap-3">
       <img src="icons/icon-192.png" alt="" class="w-8 h-8 rounded-xl">
       <h1 class="text-xl font-semibold">PassVault</h1>
+      <button id="btn-install" class="ml-2 btn bg-emerald-600 text-white hidden">Install</button>
       <span class="ml-auto text-xs opacity-80">Offline • Encrypted</span>
     </div>
   </header>

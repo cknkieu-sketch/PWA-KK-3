@@ -243,6 +243,22 @@
 
   // Bind after DOM ready
   window.addEventListener("DOMContentLoaded", ()=>{
+    // PWA install flow
+    let deferredPrompt = null;
+    const installBtn = document.querySelector("#btn-install");
+    function showInstall(){ if(installBtn) installBtn.classList.remove("hidden"); }
+    function hideInstall(){ if(installBtn) installBtn.classList.add("hidden"); }
+    window.addEventListener("beforeinstallprompt", (e)=>{ e.preventDefault(); deferredPrompt = e; showInstall(); });
+    window.addEventListener("appinstalled", ()=>{ deferredPrompt = null; hideInstall(); });
+    if (window.matchMedia && window.matchMedia("(display-mode: standalone)").matches) hideInstall();
+    if (installBtn) installBtn.addEventListener("click", async ()=>{
+      if(!deferredPrompt) return;
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      if(outcome !== "accepted") showInstall(); else hideInstall();
+    });
+
     scrOnboarding=$("#screen-onboarding"); scrLock=$("#screen-lock"); scrApp=$("#screen-app");
     msgOnboarding=$("#onboarding-msg"); msgLock=$("#lock-msg"); panel=$("#panel");
 

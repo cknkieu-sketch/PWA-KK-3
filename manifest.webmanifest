@@ -1,7 +1,7 @@
 {
   "name": "PassVault",
   "short_name": "PassVault",
-  "start_url": ".",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#0ea5e9",
   "theme_color": "#0ea5e9",
@@ -17,5 +17,10 @@
       "type": "image/png",
       "purpose": "maskable any"
     }
+  ],
+  "id": "./",
+  "scope": "./",
+  "display_override": [
+    "standalone"
   ]
 }
