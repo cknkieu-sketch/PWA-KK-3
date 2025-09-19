@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>PassVault</title>
+  <meta name="theme-color" content="#0ea5e9" />
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root{ --radius:18px }
+    .card{ border-radius: var(--radius); box-shadow: 0 10px 30px rgba(2,8,23,.08)}
+    input, select, button, textarea { border-radius: 14px }
+    .btn { padding: .75rem 1rem; border-radius: 14px; }
+    .hidden { display: none !important }
+    .overlay { position: fixed; inset: 0; background: rgba(2,8,23,.4); display: none; align-items: center; justify-content: center; padding: 1rem; }
+    .overlay.show { display: flex; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <header class="sticky top-0 bg-sky-500 text-white p-4">
+    <div class="max-w-3xl mx-auto flex items-center gap-3">
+      <img src="icons/icon-192.png" alt="" class="w-8 h-8 rounded-xl">
+      <h1 class="text-xl font-semibold">PassVault</h1>
+      <span class="ml-auto text-xs opacity-80">Offline • Encrypted</span>
+    </div>
+  </header>
+
+  <main class="max-w-3xl mx-auto p-4">
+    <!-- Onboarding -->
+    <section id="screen-onboarding" class="card bg-white p-5 mt-4">
+      <h2 class="text-lg font-semibold mb-2">Set up your vault</h2>
+      <p class="text-slate-600 mb-4">Create an encrypted vault on this device. Optionally enable biometric unlock (Chrome on HTTPS).</p>
+      <div class="space-y-3">
+        <label class="block">
+          <span class="text-sm text-slate-700">Create a PIN (4–64 chars)</span>
+          <input id="setup-pin" type="password" inputmode="numeric" class="w-full border p-3 mt-1" placeholder="Choose a PIN">
+        </label>
+        <label class="flex items-center gap-3">
+          <input id="setup-bio" type="checkbox" class="w-4 h-4">
+          <span class="text-sm">Enable biometric unlock (WebAuthn)</span>
+        </label>
+        <div class="flex gap-3">
+          <button id="btn-setup" class="btn bg-sky-600 text-white">Create Vault</button>
+          <button id="btn-import-first" class="btn bg-slate-200">Import Encrypted Backup</button>
+        </div>
+        <p id="onboarding-msg" class="text-sm text-rose-600"></p>
+      </div>
+    </section>
+
+    <!-- Lock screen -->
+    <section id="screen-lock" class="card bg-white p-5 mt-4 hidden">
+      <h2 class="text-lg font-semibold mb-2">Unlock your vault</h2>
+      <div class="space-y-3">
+        <div class="flex gap-3 items-end">
+          <label class="grow">
+            <span class="text-sm text-slate-700">PIN</span>
+            <input id="unlock-pin" type="password" class="w-full border p-3 mt-1" placeholder="Enter PIN">
+          </label>
+          <button id="btn-unlock" class="btn bg-sky-600 text-white">Unlock</button>
+        </div>
+        <button id="btn-bio" class="btn bg-slate-100">Use biometrics</button>
+        <p id="lock-msg" class="text-sm text-rose-600"></p>
+      </div>
+    </section>
+
+    <!-- App -->
+    <section id="screen-app" class="mt-4 hidden">
+      <div class="flex gap-2 mb-3">
+        <button id="btn-add" class="btn bg-sky-600 text-white">Add Entry</button>
+        <button id="btn-export" class="btn bg-slate-200">Export Encrypted Backup</button>
+        <label class="btn bg-slate-200 cursor-pointer">
+          <input id="file-import" type="file" accept=".vault,application/json" class="hidden"> Import Backup
+        </label>
+        <button id="btn-lock" class="btn bg-slate-100 ml-auto">Lock</button>
+      </div>
+      <div class="card bg-white p-4">
+        <div class="flex items-center gap-3 mb-3">
+          <input id="search" class="border p-3 w-full" placeholder="Search by app/site or username">
+        </div>
+        <div id="list" class="grid gap-3"></div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Overlay panel -->
+  <div id="panel" class="overlay">
+    <div class="bg-white rounded-2xl w-full max-w-xl card">
+      <div class="p-4 border-b flex items-center">
+        <h3 id="dlg-title" class="text-lg font-semibold">Add Entry</h3>
+        <button id="close-panel" class="btn bg-slate-100 ml-auto">Close</button>
+      </div>
+      <div class="p-4 space-y-3">
+        <input type="hidden" id="f-id">
+        <label class="block">
+          <span class="text-sm">App / Site</span>
+          <input id="f-app" class="border p-3 w-full" placeholder="e.g., Gmail">
+        </label>
+        <label class="block">
+          <span class="text-sm">URL</span>
+          <input id="f-url" class="border p-3 w-full" placeholder="https://...">
+        </label>
+        <label class="block">
+          <span class="text-sm">Username / Email</span>
+          <input id="f-username" class="border p-3 w-full" placeholder="you@example.com">
+        </label>
+        <label class="block">
+          <span class="text-sm">Password</span>
+          <div class="flex gap-2">
+            <input id="f-password" class="border p-3 w-full" placeholder="">
+            <button id="gen" type="button" class="btn bg-slate-100">Generator</button>
+          </div>
+        </label>
+        <details class="bg-slate-50 p-3 rounded-xl">
+          <summary class="cursor-pointer text-sm">Generator options</summary>
+          <div class="grid grid-cols-2 gap-3 mt-3">
+            <label class="flex items-center gap-2"><input id="g-lower" type="checkbox" checked> <span class="text-sm">lowercase</span></label>
+            <label class="flex items-center gap-2"><input id="g-upper" type="checkbox" checked> <span class="text-sm">UPPERCASE</span></label>
+            <label class="flex items-center gap-2"><input id="g-num" type="checkbox" checked> <span class="text-sm">123456</span></label>
+            <label class="flex items-center gap-2"><input id="g-sym" type="checkbox"> <span class="text-sm">!@#$%</span></label>
+            <label class="block col-span-2">
+              <span class="text-sm">Length</span>
+              <input id="g-len" type="range" min="8" max="64" value="20" class="w-full">
+              <div class="text-xs text-right"><span id="g-len-val">20</span></div>
+            </label>
+          </div>
+        </details>
+      </div>
+      <div class="p-4 border-t flex gap-2 justify-end">
+        <button id="save" class="btn bg-sky-600 text-white">Save</button>
+        <button id="cancel" class="btn bg-slate-100">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="p-4 text-center text-xs text-slate-500">© PassVault – offline, on-device. Install from your browser menu.</footer>
+
+  <script defer src="app.js"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(()=>{}));
+    }
+  </script>
+</body>
+</html>
